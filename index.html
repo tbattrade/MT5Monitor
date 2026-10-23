@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MT5 Account Monitor</title>
+<style>
+  body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:24px}
+  h1{font-size:22px;margin:0 0 4px}
+  .meta{color:#94a3b8;font-size:14px;margin-bottom:4px}
+  .sub{color:#94a3b8;font-size:13px;margin-bottom:18px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#64748b}
+  .on{background:#22c55e}.off{background:#ef4444}
+  table{border-collapse:collapse;width:100%;background:#1e293b;border-radius:8px;overflow:hidden}
+  th,td{padding:14px 16px;text-align:left;border-bottom:1px solid #334155;font-size:15px}
+  th{background:#273449;color:#94a3b8;font-weight:600}
+  td{font-size:20px;font-variant-numeric:tabular-nums}
+  .pos{color:#22c55e}.neg{color:#ef4444}
+  /* Giao diện điện thoại: mỗi cột thành một dòng */
+  @media(max-width:800px){table,thead,tbody,tr,th,td{display:block}thead{display:none}
+    td{display:flex;justify-content:space-between}td::before{content:attr(data-label);color:#94a3b8;font-size:14px}}
+</style>
+</head>
+<body>
+<h1 id="title">MT5 Account Monitor</h1>
+<div class="meta" id="meta"></div>
+<div class="sub"><span id="dot" class="dot"></span><span id="status">Đang tải...</span></div>
+<table>
+  <thead><tr>
+    <th>Balance</th><th>Leverage</th><th>Drawdown All Time</th>
+    <th>Drawdown Today</th><th>Profit Today</th><th>Profit All Time</th>
+  </tr></thead>
+  <tbody><tr>
+    <td data-label="Balance" id="balance">-</td>
+    <td data-label="Leverage" id="leverage">-</td>
+    <td data-label="Drawdown All Time" id="dd_all">-</td>
+    <td data-label="Drawdown Today" id="dd_today">-</td>
+    <td data-label="Profit Today" id="profit_today">-</td>
+    <td data-label="Profit All Time" id="profit_all">-</td>
+  </tr></tbody>
+</table>
+<script>
+// ===== CẤU HÌNH: dán URL Firebase Realtime Database của bạn vào đây =====
+const DB_URL = 'https://tbat-trade-default-rtdb.asia-southeast1.firebasedatabase.app/';
+// ========================================================================
+
+// Định dạng số tiền: 1,234.56
+const fmt = v => Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// Ghi giá trị vào ô; signed = true thì thêm dấu + và tô màu xanh/đỏ
+function setVal(id, v, signed){
+  const el = document.getElementById(id);
+  el.textContent = (signed && v > 0 ? '+' : '') + fmt(v);
+  el.className = signed ? (v > 0 ? 'pos' : v < 0 ? 'neg' : '') : (id.startsWith('dd') && v > 0 ? 'neg' : '');
+}
+
+// Lấy dữ liệu mới nhất từ Firebase (chỉ đọc, không cần đăng nhập)
+async function load(){
+  try{
+    const r = await fetch(DB_URL.replace(/\/$/, '') + '/live.json?t=' + Date.now(), {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if(!d){ document.getElementById('status').textContent = 'Chưa nhận được dữ liệu từ EA'; return; }
+
+    // Tiêu đề + thông tin phụ (số tài khoản đã che, tên sàn, đơn vị tiền)
+    document.getElementById('title').textContent = d.title || 'MT5 Account Monitor';
+    document.title = d.title || 'MT5 Account Monitor';
+    document.getElementById('meta').textContent = [d.login, d.broker, d.currency].filter(Boolean).join(' · ');
+
+    setVal('balance', d.balance, false);
+    document.getElementById('leverage').textContent = '1:' + d.leverage;
+    setVal('dd_all', d.dd_all, false);
+    setVal('dd_today', d.dd_today, false);
+    setVal('profit_today', d.profit_today, true);
+    setVal('profit_all', d.profit_all, true);
+
+    // Trạng thái: quá 3 lần không nhận được dữ liệu thì báo mất kết nối
+    // (updated_at là giờ server Firebase, tính bằng mili giây)
+    const age = Math.max(0, Math.round((Date.now() - d.updated_at) / 1000));
+    const online = age <= Math.max(30, (d.interval || 10) * 3);
+    document.getElementById('dot').className = 'dot ' + (online ? 'on' : 'off');
+    document.getElementById('status').textContent =
+      (online ? 'Online' : 'Mất kết nối EA') + ' · cập nhật ' + new Date(d.updated_at).toLocaleString('vi-VN') + ` (${age}s trước)`;
+  }catch(e){
+    document.getElementById('dot').className = 'dot off';
+    document.getElementById('status').textContent = 'Lỗi tải dữ liệu: ' + e.message;
+  }
+}
+load(); setInterval(load, 10000);   // tự cập nhật mỗi 10 giây
+</script>
+</body>
+</html>
