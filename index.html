@@ -80,7 +80,7 @@ async function load(){
     const online = age <= Math.max(30, (d.interval || 10) * 3);
     document.getElementById('dot').className = 'dot ' + (online ? 'on' : 'off');
     document.getElementById('status').textContent =
-      (online ? 'Online' : 'Mất kết nối EA') + ' · Updated ' + new Date(d.updated_at).toLocaleString('vi-VN') + ` (${age}s ago)`;
+      (online ? 'Online' : 'Mất kết nối EA') + ' · Updated ' + new Date(d.updated_at).toLocaleString('vi-VN') + 'GMT+7' +` (${age}s ago)`;
   }catch(e){
     document.getElementById('dot').className = 'dot off';
     document.getElementById('status').textContent = 'Lỗi tải dữ liệu: ' + e.message;
