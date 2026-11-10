@@ -44,17 +44,17 @@
 // ===== CẤU HÌNH: dán URL Firebase Realtime Database của bạn vào đây =====
 const DB_URL = 'https://tbat-trade-default-rtdb.asia-southeast1.firebasedatabase.app';
 // ========================================================================
-​
+
 // Định dạng số tiền: 1,234.56
 const fmt = v => Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-​
+
 // Ghi giá trị vào ô; signed = true thì thêm dấu + và tô màu xanh/đỏ
 function setVal(id, v, signed){
   const el = document.getElementById(id);
   el.textContent = (signed && v > 0 ? '+' : '') + fmt(v);
   el.className = signed ? (v > 0 ? 'pos' : v < 0 ? 'neg' : '') : '';
 }
-​
+
 // Lấy dữ liệu mới nhất từ Firebase (chỉ đọc, không cần đăng nhập)
 async function load(){
   try{
@@ -62,12 +62,12 @@ async function load(){
     if(!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     if(!d){ document.getElementById('status').textContent = 'Chưa nhận được dữ liệu từ EA'; return; }
-​
+
     // Tiêu đề + thông tin phụ (số tài khoản đã che, tên sàn, đơn vị tiền)
     document.getElementById('title').textContent = d.title || 'MT5 Account Monitor';
     document.title = d.title || 'MT5 Account Monitor';
     document.getElementById('meta').textContent = [d.login, d.broker, d.currency].filter(Boolean).join(' · ');
-​
+
     setVal('balance', d.balance, false);
     document.getElementById('leverage').textContent = '1:' + d.leverage;
     setVal('dd_all', d.dd_all, true);     // số âm -> màu đỏ
@@ -75,7 +75,7 @@ async function load(){
     setVal('floating', d.floating || 0, true);     // lãi/lỗ lệnh đang mở
     setVal('profit_today', d.profit_today, true);
     setVal('profit_all', d.profit_all, true);
-​
+
     // Trạng thái: quá 3 lần không nhận được dữ liệu thì báo mất kết nối
     // (updated_at là giờ server Firebase, tính bằng mili giây)
     const age = Math.max(0, Math.round((Date.now() - d.updated_at) / 1000));
